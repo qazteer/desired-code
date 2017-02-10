@@ -1,0 +1,1 @@
+date('Ymd', strtotime(str_replace('-', '/', $user['date_birth'])))
