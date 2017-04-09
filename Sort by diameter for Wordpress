@@ -1,0 +1,53 @@
+//--Start Sort by Diameter
+
+$params = array(
+        'posts_per_page' => -1,
+        'post_type' => 'product',
+        'meta_key' => 'pa_diameter',
+        'tax_query' => array(
+          array(
+              'taxonomy'      => 'product_cat',
+              'field' => 'term_id', //This is optional, as it defaults to 'term_id'
+              'terms'         => $cateID,
+              'operator'      => 'IN' // Possible values are 'IN', 'NOT IN', 'AND'.
+          )
+        )
+);
+$products = new WP_Query( $params ); 
+$product_post = $products->posts;
+$diam = array();
+if (isset($_GET['orderby']) && $_GET['orderby'] == '1489138986-ASC-diameter'){
+  if($products->have_posts()){
+    
+    foreach ($product_post as $key => $produc) {
+      $products_meta = get_post_meta($produc->ID);
+      
+      $arr1 = explode("-", $products_meta['pa_diameter'][0]);
+      
+      if(isset($arr1[0])) {$arr2 = explode('/',$arr1[0]);}
+      if(isset($arr2[0]) && isset($arr2[1])) {
+        $fraction = $arr2[0]/$arr2[1];
+        if(isset($fraction)) {$produc->diameter = $fraction;}
+      } 
+      else {
+        $grid = explode('#',$arr2[0]);
+        if(isset($grid[1])) $res = $grid[1];
+        else $res = $grid[0];
+        $produc->diameter = $res;
+      }
+    }
+
+    usort($product_post, function($a, $b)
+    {
+      if($a->diameter == $b->diameter) {
+          return 0;
+      }
+      return ($a->diameter < $b->diameter) ? -1 : 1;
+    });
+
+    global $wp_query;
+    $wp_query->posts = $product_post;
+  }
+}
+
+//--End Sort by Diameter
