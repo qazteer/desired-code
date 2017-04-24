@@ -3,3 +3,5 @@ phpunit tests/unit/UserTest.php --coverage-html ./report
 --------Codeception-------
 1. - Delete dir tests and file codeception.yml
 2. - codecept bootstrap
+3. - greate dirs: bin, config, files: bootstrap, UserTest
+4. - codecept run or build
