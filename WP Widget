@@ -1,0 +1,82 @@
+class am_WP_Widget_Social_Coments extends WP_Widget {
+
+	function __construct() {
+		$widget_ops = array('classname' => 'widget_social_coments', 'description' => __('Arbitrary text or HTML social comments ','am'));
+		$control_ops = array('width' => 400, 'height' => 350);
+		parent::__construct('am_social_coments', __('Text social comments','am'), $widget_ops, $control_ops);
+	}
+
+	function widget( $args, $instance ) {
+		extract($args);
+		$title = apply_filters( 'widget_title', empty( $instance['title'] ) ? '' : $instance['title'], $instance, $this->id_base );
+		$count_stars = apply_filters( 'widget_count_stars', empty( $instance['count_stars'] ) ? '' : $instance['count_stars'], $instance);
+		$author_name = apply_filters( 'widget_author_name', empty( $instance['author_name'] ) ? '' : $instance['author_name'], $instance);
+		$text = apply_filters( 'widget_text', empty( $instance['text'] ) ? '' : $instance['text'], $instance );
+		$link_read_more = apply_filters( 'widget_link_read_more', empty( $instance['link_read_more'] ) ? '' : $instance['link_read_more'], $instance);
+		echo $before_widget;
+		if ( !empty( $title ) ) { echo $before_title . $title . $after_title; } ?>
+			<div class="textwidget"><?php echo !empty( $instance['filter'] ) ? wpautop( $text ) : $text; ?></div>
+		<?php
+		echo $after_widget;
+	}
+
+	function update( $new_instance, $old_instance ) {
+		$instance = $old_instance;
+		$instance['title'] = strip_tags($new_instance['title']);
+		$instance['title'] = strip_tags($new_instance['title']);
+		$instance['count_stars'] = strip_tags($new_instance['count_stars']);
+		if ( current_user_can('unfiltered_html') )
+			$instance['text'] =  $new_instance['text'];
+		else
+			$instance['text'] = stripslashes( wp_filter_post_kses( addslashes($new_instance['text']) ) ); // wp_filter_post_kses() expects slashed
+		$instance['link_read_more'] = strip_tags($new_instance['link_read_more']);
+		$instance['filter'] = isset($new_instance['filter']);
+		return $instance;
+	}
+
+	function form( $instance ) {
+		$instance = wp_parse_args( (array) $instance, array( 'title' => '', 'author_name' => '', 'text' => '', 'link_read_more' => '' ) );
+		$title = strip_tags($instance['title']);
+		$count_stars = strip_tags($instance['count_stars']);
+		$author_name = strip_tags($instance['author_name']);
+		$text = esc_textarea($instance['text']);
+		$link_read_more = strip_tags($instance['link_read_more']);
+?>
+		<p><label for="<?php echo $this->get_field_id('title'); ?>"><?php _e('Title:','am'); ?></label>
+		<input class="widefat" id="<?php echo $this->get_field_id('title'); ?>" name="<?php echo $this->get_field_name('title'); ?>" type="text" value="<?php echo esc_attr($title); ?>" /></p>
+		
+		<p><label for="<?php echo $this->get_field_id('count_stars'); ?>"><?php _e('Count stars:','am'); ?></label>
+		<select class='widefat' id="<?php echo $this->get_field_id('count_stars'); ?>"
+                name="<?php echo $this->get_field_name('count_stars'); ?>" type="number">
+          <option value='1'<?php echo ($count_stars=='1')?'selected':''; ?>>
+            1 Star
+          </option>
+          <option value='2'<?php echo ($count_stars=='2')?'selected':''; ?>>
+            2 Stars
+          </option>
+          <option value='3'<?php echo ($count_stars=='3')?'selected':''; ?>>
+            3 Stars
+          </option>
+          <option value='4'<?php echo ($count_stars=='4')?'selected':''; ?>>
+            4 Stars
+          </option>
+          <option value='5'<?php echo ($count_stars=='5')?'selected':''; ?>>
+            5 Stars
+          </option>
+        </select>     
+
+		<p><label for="<?php echo $this->get_field_id('author_name'); ?>"><?php _e('Author name:','am'); ?></label>
+		<input class="widefat" id="<?php echo $this->get_field_id('author_name'); ?>" name="<?php echo $this->get_field_name('author_name'); ?>" type="text" value="<?php echo esc_attr($author_name); ?>" /></p>
+
+		<p><label for="<?php echo $this->get_field_id('text'); ?>"><?php _e('Social comment:','am'); ?></label>
+		<textarea class="widefat" rows="16" cols="20" id="<?php echo $this->get_field_id('text'); ?>" name="<?php echo $this->get_field_name('text'); ?>"><?php echo $text; ?></textarea>
+		
+		<p><label for="<?php echo $this->get_field_id('link_read_more'); ?>"><?php _e('Link read more:','am'); ?></label>
+		<input class="widefat" id="<?php echo $this->get_field_id('link_read_more'); ?>" name="<?php echo $this->get_field_name('link_read_more'); ?>" type="text" value="<?php echo esc_attr($link_read_more); ?>" /></p>
+
+		<p><input id="<?php echo $this->get_field_id('filter'); ?>" name="<?php echo $this->get_field_name('filter'); ?>" type="checkbox" <?php checked(isset($instance['filter']) ? $instance['filter'] : 0); ?> />&nbsp;<label for="<?php echo $this->get_field_id('filter'); ?>"><?php _e('Automatically add paragraphs','am'); ?></label></p>
+<?php
+	}
+}
+
+register_widget('am_WP_Widget_Social_Coments');
