@@ -1,0 +1,4 @@
+<?php 
+    if($about_page = get_post( get_the_ID() ))
+      echo apply_filters('the_content', $about_page->post_content);
+?>
