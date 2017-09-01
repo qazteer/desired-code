@@ -1,0 +1,11 @@
+//DINAMIC ONCHANGE
+$(parent element which is static).on('change', 'your selector', function(){
+  do something here
+});
+-------EXAMPLE----
+$("#pricingcalculator").on("change", ".calculateAmounts", function(){
+      calculateAmounts();
+}); 
+
+//JCF DINAMIC
+jcf.replaceAll(); 
