@@ -1,0 +1,5 @@
+//SUB MENU VISIBLE
+#nav ul {visibility: hidden;}
+#nav > li:hover ul {
+	visibility: visible;
+}
