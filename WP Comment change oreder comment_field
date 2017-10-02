@@ -1,0 +1,19 @@
+//change oreder comment_field
+	add_filter( 'comment_form_defaults', 't5_move_textarea' );
+	add_action( 'comment_form_top', 't5_move_textarea' );
+
+	function t5_move_textarea( $input = array () )
+	{
+	    static $textarea = '';
+
+	    if ( 'comment_form_defaults' === current_filter() )
+	    {
+	        // Copy the field to our internal variable …
+	        $textarea = '<p class="comment-form-comment"><textarea aria-required="true" rows="8" cols="45" name="comment" id="comment" placeholder="Comments..."></textarea></p>';
+	        // … and remove it from the defaults array.
+	        $input['comment_field'] = '';
+	        return $input;
+	    }
+
+	    print apply_filters( 'comment_form_field_comment', $textarea );
+	}
