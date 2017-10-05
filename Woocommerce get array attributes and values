@@ -1,0 +1,15 @@
+// start get array attributes and values
+  $attributes = $product->get_attributes();
+  foreach($attributes as $attr=>$attr_deets){
+      $attribute_label = wc_attribute_label($attr);
+      if(isset($attributes[$attr]) || isset($attributes['pa_'.$attr])) {
+          $attribute = isset($attributes[$attr]) ? $attributes[$attr] : $attributes['pa_'.$attr];
+
+          if($attribute['is_taxonomy']) {
+             $formatted_attributes[$attribute_label] = wc_get_product_terms($product->id, $attribute['name']);
+          }else {
+             $formatted_attributes[$attribute_label] = $attribute['value'];
+          }
+      }
+  }
+// end output - $formatted_attributes
