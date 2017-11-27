@@ -1,0 +1,18 @@
+add_filter( 'woocommerce_add_to_cart_validation', 'bbloomer_only_one_in_cart', 99, 2 );
+  
+function bbloomer_only_one_in_cart( $passed, $added_product_id ) {
+ 
+	global $woocommerce;
+
+	$cart = $woocommerce->cart->get_cart();
+	foreach( $cart as $key => $cart_item ){
+    //get ACF
+		if(get_field('is_membership', $cart_item['product_id'])){
+			    if($added_product_id == $cart_item['product_id']){
+			    	$woocommerce->cart->remove_cart_item($key);
+			    }
+		}
+	}
+
+	return $passed;
+}
