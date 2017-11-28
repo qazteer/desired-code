@@ -1,0 +1,67 @@
+/**
+ * Add the field to the checkout
+ */
+add_action( 'woocommerce_after_order_notes', 'my_custom_checkout_field' );
+
+function my_custom_checkout_field( $checkout ) {
+
+    echo '<div class="woocommerce-additional-fields student_information"><h3>' . __('Student Information') . '</h3>';
+
+    woocommerce_form_field( 'student_first_name', array(
+        'type'          => 'text',
+        'class'         => array('my-field-class form-row-wide'),
+        'label'         => __('Student First Name'),
+        ), $checkout->get_value( 'student_first_name' ));
+
+   	woocommerce_form_field( 'student_last_name', array(
+        'type'          => 'text',
+        'class'         => array('my-field-class form-row-wide'),
+        'label'         => __('Student Last Name'),
+        ), $checkout->get_value( 'student_last_name' ));
+
+   	woocommerce_form_field( 'email_address', array(
+        'type'          => 'email',
+        'class'         => array('my-field-class form-row-wide'),
+        'label'         => __('Email Address'),
+        ), $checkout->get_value( 'email_address' ));
+
+   	woocommerce_form_field( 'student_password', array(
+        'type'          => 'password',
+        'class'         => array('my-field-class form-row-wide'),
+        'label'         => __('Password'),
+        ), $checkout->get_value( 'student_password' ));
+
+    echo '</div>';
+
+}
+
+/**
+ * Update the order meta with field value
+ */
+add_action( 'woocommerce_checkout_update_order_meta', 'my_custom_checkout_field_update_order_meta' );
+
+function my_custom_checkout_field_update_order_meta( $order_id ) {
+    if (!empty($_POST['email_address']) && !empty($_POST['student_password'])) {
+
+    	$username = $_POST['email_address'];
+    	$student_first_name = !empty($_POST['student_first_name']) ? $_POST['student_first_name'] : '';
+    	$student_last_name = !empty($_POST['student_last_name']) ? $_POST['student_last_name'] : '';
+    	$email = $_POST['email_address'];
+    	$password = $_POST['student_password'];
+
+        $user_id = wc_create_new_customer($email, $username, $password);
+        update_user_meta( $user_id, "first_name", $student_first_name );
+		update_user_meta( $user_id, "last_name", $student_last_name );
+		update_user_meta( $user_id, "billing_email", $email );
+    }
+}
+/*sent mail*/
+add_filter('woocommerce_email_order_meta_keys', 'my_custom_order_meta_keys');
+
+function my_custom_order_meta_keys( $keys ) {
+	if (!empty($_POST['email_address']) && !empty($_POST['student_password'])) {
+    	$keys['User Login'] = $_POST['email_address'];
+    	$keys['User Password'] = $_POST['student_password'];
+    	return $keys;
+    }
+}
