@@ -1,0 +1,16 @@
+  //delete tag <p> from WYSIWYG Fields
+	function the_field_without_wpautop($field_name){
+		remove_filter('acf_the_content', 'wpautop');
+		$field = get_sub_field( $field_name );
+		add_filter('acf_the_content', 'wpautop');
+
+		return $field;
+	}
+
+	//delete all tag from WYSIWYG Fields
+	function jw_strip_all_tags_from_sub_field($field){
+		$field 	        = get_sub_field($field);
+		$field_stripped = wp_strip_all_tags($field);
+
+		return $field_stripped;
+	}
