@@ -1,0 +1,12 @@
+function get_custom_taxonomies($post_ID, $taxonomies){ 
+		$filter = '';
+		if($taxonomies){
+			foreach($taxonomies as $taxonomy) {
+				$object = get_the_terms($post_ID, $taxonomy);
+				foreach ($object as $value) {
+					$filter .= $value->slug . ' ';
+				}
+			}
+		}
+		return $filter;
+	}
