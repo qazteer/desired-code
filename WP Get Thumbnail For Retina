@@ -1,0 +1,6 @@
+<?php 
+  $image_id = get_post_thumbnail_id($p->ID);
+  $image = wp_get_attachment_image_src($image_id, 'news_slider'); 
+  $image_alt = get_post_meta($image_id, '_wp_attachment_image_alt', true); 
+?>
+<?php echo am_get_retina_img($image[0], '', $image[1], $image[2], $image_alt); ?>
