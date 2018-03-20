@@ -1,0 +1,8 @@
+$dataToBePassed = array(
+    'autoplay' => get_field('autoplay','option'),
+    'autoplaySpeed' => get_field('autoplay_speed','option'),
+    'speed' => get_field('speed','option')
+);
+wp_localize_script('am_' . sanitize_title('includes/js/jquery.main.js'), 'php_vars', $dataToBePassed);
+
+EXAMPLE: http://prntscr.com/itpoep
