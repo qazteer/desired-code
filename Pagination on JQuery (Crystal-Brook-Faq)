@@ -1,0 +1,81 @@
+/* JQuery */ 
+
+//click Older Btn
+		$(document).on('click','.PaginationAjax a#older', function(e){
+			e.preventDefault();
+            $btn = $(this);
+
+            var contentInner = '';
+            $('#contentInner div.tab').each(function(i,elem){
+                if($(this).hasClass('active')){
+                    contentInner = $(this);
+                }
+            });
+
+            $btn_never = contentInner.find('.PaginationAjax a#never');
+            $btn_never.show();
+
+            $count = 0;
+            $count_li = contentInner.find('ul.accordion > li').size();
+            
+            contentInner.find('ul.accordion > li').each(function(i,elem){ 
+                $index = i;
+                $index++;
+                if($(this).css('display') != 'none'){ //all open
+                   $(this).css('display','none');
+                   $btn.attr('href',i);
+                }else{
+                    $btn_href = $btn.attr('href'); //all close
+                    if($btn_href < i){
+                        if($count<5){
+                            $(this).css('display','list-item');
+                            if($index == $count_li){
+                                $btn.hide();
+                            }
+                        }
+                        $count++; 
+                    }
+                }
+            });
+            
+		});
+
+        //click Newer Btn
+        $(document).on('click','.PaginationAjax a#never', function(e){
+            e.preventDefault();
+            $btn = $(this);
+
+            var contentInner = '';
+            $('#contentInner div.tab').each(function(i,elem){
+                if($(this).hasClass('active')){
+                    contentInner = $(this);
+                }
+            });
+
+            $btn_never = contentInner.find('.PaginationAjax a#older');
+            $btn_never.show();
+
+            $count = 0;
+            $count_li = contentInner.find('ul.accordion > li').size();
+            
+            $.fn.reverse = [].reverse;
+            contentInner.find('ul.accordion > li').reverse().each(function(i,elem){ 
+                $index = i;
+                $index++;
+                if($(this).css('display') != 'none'){
+                   $(this).css('display','none');
+                   $btn.attr('href',i);
+                }else{
+                    $btn_href = $btn.attr('href');
+                    if($btn_href < i){
+                        if($count<5){
+                            $(this).css('display','list-item');
+                            if($index == $count_li){
+                                $btn.hide();
+                            }
+                        }
+                        $count++; 
+                    }
+                }
+            });
+        });
