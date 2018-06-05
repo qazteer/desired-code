@@ -1,0 +1,7 @@
+//get emails from trext
+	function am_getTweetsUrls($string){
+		$pattern = '/https?\:\/\/[^\" ]+/i';
+		$replacement = '<a href="$0" target="_blank">$0</a>';
+		return preg_replace($pattern, $replacement, $string);
+
+	}
