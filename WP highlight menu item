@@ -1,0 +1,10 @@
+function add_custom_class($classes = array(), $menu_item = false){
+    if (is_page_template('page-templates/careers-application.php')){
+      $slug_template = esc_html(get_page_template_slug($menu_item->object_id));
+      if($slug_template == 'page-templates/careers.php'){
+          $classes[] = 'current-menu-item';
+        }       
+    }                    
+    return $classes;
+}
+add_filter('nav_menu_css_class', 'add_custom_class', 100, 2);
