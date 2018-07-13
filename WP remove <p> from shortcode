@@ -1,0 +1,8 @@
+function ul_class($atts, $content = null){
+    $new_content = str_replace("<ul>", '<ul class="grid">', $content);
+    $paragraphs = array("<p>","</p>");
+    $noparagraphs = array("","");
+    $new_content =str_replace( $paragraphs, $noparagraphs, $new_content);
+    return $new_content;
+}
+add_shortcode('ul-class', 'ul_class');
