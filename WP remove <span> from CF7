@@ -1,0 +1,7 @@
+//REMOVE ONLY FROM FOOTER FORM
+add_filter('wpcf7_form_elements', function($content) {
+		if(did_action('get_footer')){
+	    	$content = preg_replace('/<(span).*?class="\s*(?:.*\s)?wpcf7-form-control-wrap(?:\s[^"]+)?\s*"[^\>]*>(.*)<\/\1>/i', '\2', $content);
+	    }
+	    return $content;
+});
