@@ -1,0 +1,9 @@
+if(jQuery(this).attr('href').substring(1).length){
+    var headerHeight = jQuery('.fixed').innerHeight();
+    var scrollElement = jQuery(this).attr('href').substring(1);
+    setTimeout(function(){
+      jQuery('html, body').animate({scrollTop: jQuery('#' + scrollElement).offset().top - headerHeight}, 400);
+    }, 400);
+}else{
+    e.preventDefault();
+}
