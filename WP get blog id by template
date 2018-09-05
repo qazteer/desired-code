@@ -1,0 +1,16 @@
+function am_get_blog_id(){
+		$page = get_posts( array(
+		    'post_type' => 'page',
+		    'meta_key' => '_wp_page_template',
+		    'meta_value' => 'page-templates/blog.php', // Change this to your template file name
+		    'hierarchical' => 0,
+		    'posts_per_page' => 1,
+		) );
+
+		if ( $page ){
+		    $page = current( $page );
+		    return $page->ID;
+		}else{
+			return false;
+		}
+	}
