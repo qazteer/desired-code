@@ -1,0 +1,8 @@
+$('form.cc-search-form').submit(function(){
+			//select return -1
+			if($('#cat').val() == -1){
+			    $(this).find('select').each(function() {
+			        $(this).prop('disabled', true);
+			    });
+			}
+});
