@@ -1,0 +1,87 @@
+// Register Custom Post Type Doctors
+function am_doctors_post_type() {
+
+    $labels = array(
+        'name' => _x('Doctors', 'Post Type General Name', 'am'),
+        'singular_name' => _x('Doctors', 'Post Type Singular Name', 'am'),
+        'menu_name' => __('Doctors', 'am'),
+        'name_admin_bar' => __('Doctors', 'am'),
+        'archives' => __('Item Archives', 'am'),
+        'attributes' => __('Item Attributes', 'am'),
+        'parent_item_colon' => __('Parent Item:', 'am'),
+        'all_items' => __('All Items', 'am'),
+        'add_new_item' => __('Add New Item', 'am'),
+        'add_new' => __('Add New', 'am'),
+        'new_item' => __('New Item', 'am'),
+        'edit_item' => __('Edit Item', 'am'),
+        'update_item' => __('Update Item', 'am'),
+        'view_item' => __('View Item', 'am'),
+        'view_items' => __('View Items', 'am'),
+        'search_items' => __('Search Item', 'am'),
+        'not_found' => __('Not found', 'am'),
+        'not_found_in_trash' => __('Not found in Trash', 'am'),
+        'featured_image' => __('Featured Image', 'am'),
+        'set_featured_image' => __('Set featured image', 'am'),
+        'remove_featured_image' => __('Remove featured image', 'am'),
+        'use_featured_image' => __('Use as featured image', 'am'),
+        'insert_into_item' => __('Insert into item', 'am'),
+        'uploaded_to_this_item' => __('Uploaded to this item', 'am'),
+        'items_list' => __('Items list', 'am'),
+        'items_list_navigation' => __('Items list navigation', 'am'),
+        'filter_items_list' => __('Filter items list', 'am'),
+    );
+    $args = array(
+        'label' => __('Doctors', 'am'),
+        'description' => __('Post Type Description', 'am'),
+        'labels' => $labels,
+        'supports' => array('title', 'editor', 'thumbnail',),
+        'hierarchical' => false,
+        'public' => true,
+        'show_ui' => true,
+        'show_in_menu' => true,
+        'menu_position' => 8,
+        'menu_icon' => 'dashicons-id',
+        'show_in_admin_bar' => true,
+        'show_in_nav_menus' => false,
+        'can_export' => true,
+        'has_archive' => false,
+        'exclude_from_search' => true,
+        'publicly_queryable' => true,
+        'capability_type' => 'post',
+        //'taxonomies' => array('category', 'post_tag')
+    );
+    register_post_type('doctor', $args);
+}
+
+add_action('init', 'am_doctors_post_type', 0);
+
+
+// registration doctors taxonomies
+add_action( 'init', 'create_doctor_taxonomies', 0 );
+
+
+function create_doctor_taxonomies(){
+    
+    $labels = array(
+        'name' => _x( 'Doctors categories', 'taxonomy general name' ),
+        'singular_name' => _x( 'Doctor category', 'taxonomy singular name' ),
+        'search_items' =>  __( 'Search Doctors categories' ),
+        'all_items' => __( 'All Regions' ),
+        'parent_item' => __( 'Parent Doctor category' ),
+        'parent_item_colon' => __( 'Parent Doctor category:' ),
+        'edit_item' => __( 'Edit Doctor category' ),
+        'update_item' => __( 'Update Doctor category' ),
+        'add_new_item' => __( 'Add New Doctor category' ),
+        'new_item_name' => __( 'New Doctor category Name' ),
+        'menu_name' => __( 'Doctors categories' ),
+    );
+
+    // Add taxonomie 'category' (as category)
+    register_taxonomy('doctor_category', array('doctor'), array(
+        'hierarchical' => true,
+        'labels' => $labels,
+        'show_ui' => true,
+        'query_var' => true,
+        'rewrite' => array( 'slug' => 'doctor_category' ),
+    ));
+}
