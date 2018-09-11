@@ -1,0 +1,29 @@
+// **** function.php
+
+//property_category - taxonomy
+//property - post type
+
+add_action( 'pre_get_posts', 'am_tax_query' );
+function am_tax_query($query){
+
+    if ( !is_admin() && $query->is_main_query() && $query->is_tax( 'property_category' ) ) {
+        $query->set( 'post_type', array( 'property') );
+    }
+};
+
+// **** taxonomy-template.php
+
+<?php if (have_posts()) : while (have_posts()) : the_post(); ?>
+  <?php $term = get_queried_object();  ?>
+
+  <?php if (have_rows('sections', $term)) : ?>
+
+    <?php while (have_rows('sections', $term)) : the_row();
+
+      get_template_part('template-parts/sections/section', get_row_layout());
+
+    endwhile; ?>
+
+  <?php endif; ?>
+
+<?php endwhile; endif; ?>
