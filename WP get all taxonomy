@@ -1,0 +1,10 @@
+// get custom $terms
+function am_get_taxonomy($taxonomy){
+  $args = array(
+    'taxonomy' => $taxonomy,
+    'hide_empty' => false,
+    'parent' => 0
+  );
+  $terms = get_terms( $args );
+  return $terms;
+}
