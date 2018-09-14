@@ -1,0 +1,16 @@
+function am_get_top_level_parent_term($post_id, $taxonomy){
+  $root_term = array();
+  if($terms = get_the_terms($post_id, $taxonomy)){
+    foreach ($terms as $term){
+      if($term->parent == 0){
+        array_push($root_term, $term->slug);
+      }else{
+        $end = get_ancestors( $term->term_id, $taxonomy );
+        $rootId = end( $end );
+        $root = get_term( $rootId, $taxonomy );
+        array_push($root_term, $root->slug);
+      }
+    }
+  }
+  return $root_term;
+}
