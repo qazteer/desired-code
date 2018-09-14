@@ -1,0 +1,17 @@
+<?php
+/*
+ * Convert Object To Array
+ * https://v123.tw
+*/
+$args = array(
+	'showposts' => -1,
+	'post_type' => 'post',
+	'post_status' => 'publish'
+);
+$result = new WP_Query($args);
+$data = array_map(
+	function( $post ) {
+		return (array) $post;
+	},
+	$result->posts
+);
