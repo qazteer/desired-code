@@ -1,0 +1,47 @@
+<?php
+/**
+ * Sort a multi-dimensional array by key, then by value.
+ *
+ * @param array Array to be sorted
+ * @param int One of the available sort options: SORT_ASC, SORT_DESC, SORT_REGULAR, SORT_NUMERIC, SORT_STRING
+ * @param int One of the available sort options: SORT_ASC, SORT_DESC, SORT_REGULAR, SORT_NUMERIC, SORT_STRING
+ * @return void
+ * @example The following array will be reordered:
+ *  $a = array(
+ *      'd' => 4,
+ *      'c' => 2,
+ *      'a' => 3,
+ *      'b' => 1,
+ *      'e' => 2,
+ *      'g' => 2,
+ *      'f' => 2,
+ *  );
+ *  SortArrayByKeyThanValue($a);        # reorder array to: array(
+ *      'b' => 1,
+ *      'c' => 2,
+ *      'e' => 2,
+ *      'f' => 2,
+ *      'g' => 2,
+ *      'a' => 3,
+ *      'd' => 4,
+ *  );
+ * @author Sijmen Ruwhof <sijmen(a)secundity.com>
+ * @copyright 2011, Secundity
+ */
+function SortArrayByKeyThanValue (&$pArray, $pSortMethodForKey = SORT_ASC, $pSortMethodForValue = SORT_ASC)
+{
+    # check user input: sorting is not necessary
+    if (count($pArray) < 2)
+        return;
+
+    # define $k and $v as array_multisort() needs real variables, as user input is put by reference
+    $k = array_keys  ($pArray);
+    $v = array_values($pArray);
+
+    array_multisort(
+        $v, $pSortMethodForValue,
+        $k, $pSortMethodForKey
+    );
+    $pArray = array_combine($k, $v);
+}
+?>
