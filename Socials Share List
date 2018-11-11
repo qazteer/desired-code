@@ -1,0 +1,22 @@
+<ul>
+     <li><a href="https://www.facebook.com/sharer/sharer.php?u=<?php echo esc_url(get_permalink()); ?>" target="_blank">Facebook</a></li>
+     <li><a href="https://twitter.com/intent/tweet?text=<?php echo esc_attr(get_the_title()); ?>&url=<?php echo esc_url(get_permalink()); ?>" target="_blank">Twitter</a></li>
+     <li><a href="https://www.linkedin.com/shareArticle?mini=true&url=<?php echo esc_url(get_permalink()); ?>&title=<?php echo esc_attr(get_the_title()); ?>&summary=<?php echo esc_attr(get_the_title()); ?>&source=<?php echo esc_url(home_url()); ?>" target="_blank">LinkedIn</a></li>
+     <li><a href="https://plus.google.com/share?url=<?php echo esc_url(get_permalink()); ?>" target="_blank">Google </a></li>
+     <li><a href="https://www.stumbleupon.com/submit?url=<?php echo esc_url(get_permalink()); ?>&title=<?php echo esc_attr(get_the_title()); ?>" target="_blank">StumbleUpon</a></li>
+     <li><a href="https://del.icio.us/post?url=<?php echo esc_url(get_permalink()); ?>&title=<?php echo esc_attr(get_the_title()); ?>">del.icio.us</a></li>
+     <li><a href="https://digg.com/submit?url=<?php echo esc_url(get_permalink()); ?>&title=<?php echo esc_attr(get_the_title()); ?>" target="_blank">Digg</a></li>
+     <li><a href="https://reddit.com/submit?url=<?php echo esc_url(get_permalink()); ?>&title=<?php echo esc_attr(get_the_title()); ?>" target="_blank">Reddit</a></li>
+     <li><a href="https://tumblr.com/share?s=&v=3&t=<?php echo esc_attr(get_the_title()); ?>&u=<?php echo esc_url(get_permalink()); ?>" target="_blank">Tumblr</a></li>
+     <li><a href="https://www.xing.com/spi/shares/new?url=<?php echo esc_url(get_permalink()); ?>" target="_blank">Xing</a></li>
+     <?php
+         $thumbnail_id = get_post_thumbnail_id();
+         $thumbnail = wp_get_attachment_image_src($thumbnail_id,'full');
+         $thumbnail_link = '';
+         if(isset($thumbnail[0])) :
+              $thumbnail_link = $thumbnail[0];
+         endif;
+    ?>
+    <li class="pinterest"><a target="_blank" href="https://www.pinterest.com/pin/create/button/?url=<?php echo esc_url(get_permalink()); ?>&media=<?php echo $thumbnail_link; ?>&description=<?php echo esc_attr(get_the_title()); ?>">pinterest</a></li>
+     <li><a href="mailto:?subject=<?php echo esc_attr(get_the_title()); ?>&body=<?php echo esc_url(get_permalink()); ?>">E-mail</a></li>
+</ul>
