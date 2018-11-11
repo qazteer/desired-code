@@ -1,0 +1,1186 @@
+<?php
+	
+	// get all xml images
+	function am_get_all_xml_images($path){
+
+		$All_XML_images_array = array();
+		$XML_images_array = array();
+		// get XML images
+		$xml_reader = new XMLReader;
+		$xml_reader->open($path);
+
+		while ($xml_reader->read()){		
+			if ($xml_reader->nodeType == XMLReader::ELEMENT && $xml_reader->localName  == 'Listing'){
+				$xml = simplexml_load_string($xml_reader->readOuterXML());
+
+				if( isset($xml->Images) && !empty($xml->Images) ){
+					if( isset($xml->Images->Url) && !empty($xml->Images->Url) ){
+						$XML_images_array = (array) $xml->Images->Url;
+						if($XML_images_array){
+							foreach ($XML_images_array as $key => $xml_img) {
+								array_push($All_XML_images_array, basename($xml_img));
+							}
+						}
+					}
+				}
+			}
+		}
+		return $All_XML_images_array;
+	}
+
+	function am_xml_parser(){
+
+		if ( isset( $_POST['delete_xml'] ) && !empty( $_POST['delete_xml'] ) ) {
+
+			am_delete_posts_and_terms();
+		}
+
+		function true_supported_image_sizes( $sizes) {
+		    return array('w276h171', 'w658h436');
+		}
+		add_filter('intermediate_image_sizes', 'true_supported_image_sizes');
+
+
+		$path = '';
+		$upload_hub = (object) wp_upload_dir();
+		if( ! $upload_hub->error ) {
+			$path = $upload_hub->url.'/hub/cove.xml';
+		}
+		else { echo '<span class="error">'.__('Invalid XML file path.','am').'</span>';}
+
+		if( $path ){
+
+			require_once ABSPATH . 'wp-admin/includes/post.php';
+			require_once( ABSPATH . 'wp-admin/includes/image.php' );
+
+			// array fol all xml-images
+			$All_XML_images_array = am_get_all_xml_images($path);
+
+			$xml_reader = new XMLReader;
+			$xml_reader->open($path);
+			set_time_limit(3600);
+
+			while ($xml_reader->read()):		
+				if ($xml_reader->nodeType == XMLReader::ELEMENT && $xml_reader->localName  == 'Listing'){
+					$xml = simplexml_load_string($xml_reader->readOuterXML());
+			
+					// post_type
+					if((string)$xml->PurposeOfInventory == 'Rental') $post_type = 'rentals';
+					elseif((string)$xml->PurposeOfInventory == 'For Sale') $post_type = 'homes';
+					elseif((string)$xml->PurposeOfInventory == 'Both') $post_type = 'Both';
+					else $post_type = false;
+
+					if($post_type){
+
+
+						$array_id = array();
+						$post_title = '';
+						$lot = '';
+						$community_or_rv_resort = '';
+						$city = '';
+						$state = '';
+						$home_price = '';
+						$rental_price = '';
+						$price = '';
+						$bedrooms = '';
+						$bathrooms = '';
+						$square_footage = '';
+						$about_text = '';
+						$features_list = array();
+						$home_dimensions = '';
+						$manufacturer = '';
+						$year_made = '';
+						$rvmh = '';
+						$link_availability = '';
+						$link_availability_homes = '';
+
+
+						
+
+						// post_title
+						if( isset($xml->Address1) && !empty($xml->Address1) ) $post_title = trim((string)$xml->Address1);
+						else $post_title = $post_type;
+
+						// Lot
+						if( isset($xml->Site) && !empty($xml->Site) ) $lot = (int)$xml->Site;
+
+						// Community or RV Resort
+						if( isset($xml->CommunityName) && !empty($xml->CommunityName) ) {
+							$community_name = (string)$xml->CommunityName;
+							$community_or_rv_resort = post_exists($community_name);
+						}
+
+						// State & City
+						if($community_or_rv_resort){
+
+							$city = get_field('city', $community_or_rv_resort);
+							$state = get_field('state', $community_or_rv_resort);
+						}else{
+							if($post_type == 'Both'){
+								$rental_id = am_data_xml_equal_database($post_title, 'rentals');
+								update_field('imported', 1, $rental_id);
+								$home_id = am_data_xml_equal_database($post_title, 'homes');
+								update_field('imported', 1, $home_id);
+							}else{
+								$post_id = am_data_xml_equal_database($post_title, $post_type);
+								update_field('imported', 1, $post_id);
+							}
+
+							$text = $community_name."\n";
+							$filename = $upload_hub->path."/hub/community_name.txt";
+							$fh = fopen($filename, "a");
+							fwrite($fh, $text);
+							fclose($fh);
+
+							continue;
+						}
+
+						// AskingPrice && RentalPrice (isset two field)
+						if( isset($xml->AskingPrice) && !empty($xml->AskingPrice) ) $home_price = round((int)$xml->AskingPrice);
+
+						if( isset($xml->RentalPrice) && !empty($xml->RentalPrice) ) $rental_price = round((int)$xml->RentalPrice);
+
+						// Bedrooms
+						if( isset($xml->Bedrooms) && !empty($xml->Bedrooms) ) $bedrooms = (int)$xml->Bedrooms;
+
+						// Bathrooms
+						if( isset($xml->Bathrooms) && !empty($xml->Bathrooms) ) $bathrooms = (int)$xml->Bathrooms;
+
+						// Sqft1
+						if( isset($xml->Sqft1) && !empty($xml->Sqft1) ) $square_footage = (int)$xml->Sqft1;
+
+						// Description
+						if( isset($xml->Description) && !empty($xml->Description) ) $about_text = (string)$xml->Description;
+
+						// Features repeater
+						if( isset($xml->Features) && !empty($xml->Features) ) {
+							if( isset($xml->Features->Feature) && !empty($xml->Features->Feature) ){
+
+								$features_data = array();
+								foreach ((array)$xml->Features->Feature as $feature) {
+
+									$ftr = (string)$feature;
+									$features_data['text'] = $ftr;
+									array_push($features_list, $features_data);
+								}
+								
+							}
+						}
+
+						// Width1 x Length1 taxonomy
+						if( isset($xml->Width1) && !empty($xml->Width1) ) $width = (string)$xml->Width1;
+						if( isset($xml->Length1) && !empty($xml->Length1) ) $length = (string)$xml->Length1;
+						if(isset($width) && isset($length)) $home_dimensions = $width.'x'.$length; 
+
+						// Make (rental field & home taxonomy)
+						if( isset($xml->Make) && !empty($xml->Make) ) $manufacturer = (string)$xml->Make;
+
+						// Year (rental data picer & home number)
+						if( isset($xml->Year) && !empty($xml->Year) ) $year_made = (int)$xml->Year;
+
+						// CommunityType (only rental)
+						if( isset($xml->CommunityType) && !empty($xml->CommunityType) ) $rvmh = (string)$xml->CommunityType;
+
+						$link_availability = esc_url(home_url());
+						$link_availability_homes = array('title' => __('request more info ABOUT THIS HOME','am'),'url' => esc_url(home_url()));
+
+						// Add Intro Section
+						$is_image = get_field('is_image','option');	
+						$intro_section_rentals = array(
+							array( 
+								'image' => $is_image['ID'], 
+								'title' => $post_title,
+								'link' => array('title'=> __('request more info'), 'url' => esc_url(home_url())),
+								'text_under_link' => array('title'=> __('Search all rentals'), 'url' => esc_url(home_url())),
+								'acf_fc_layout' => 'intro' 
+							)
+						);
+						$intro_section_homes = array(
+							array( 
+								'image' => $is_image['ID'], 
+								'title' => $post_title,
+								'acf_fc_layout' => 'intro' 
+							)
+						);
+
+
+
+						//insert post
+		    			if($post_type == 'Both'){
+
+		    				/* -- Rentals -- */
+
+		    				$rentals_flag = true;
+		    				$rental_id = am_data_xml_equal_database($post_title, 'rentals');
+		    				if( !$rental_id ){
+
+		    					$rentals_flag = false;
+
+			    				$new_rental = array(
+			    				   'post_type' => 'rentals',
+								   'post_title' => $post_title,
+								   'post_status' => 'publish'
+				    			);
+				    			$rental_id = wp_insert_post( wp_slash($new_rental) );
+				    			
+				    			array_push($array_id, $rental_id);
+				    		}
+
+				    			update_field('lot', $lot, $rental_id);
+				    			update_field('community_or_rv_resort', $community_or_rv_resort, $rental_id);
+
+				    			am_update_country_and_state($rental_id, $state, $city);
+
+				    			update_field('price', $rental_price, $rental_id);
+				    			update_field('bedrooms', $bedrooms, $rental_id);
+				    			update_field('bathrooms', $bathrooms, $rental_id);
+				    			update_field('square_footage', $square_footage, $rental_id);
+				    			update_field('about_text', $about_text, $rental_id);
+				    			update_field('features_list', $features_list, $rental_id);
+				    			am_insert_term($rental_id, $home_dimensions, 'home-dimension');
+				    			update_field('manufacturer', $manufacturer, $rental_id);
+				    			update_field('year_made', $year_made, $rental_id);
+				    			update_field('rvmh', $rvmh, $rental_id);
+				    			update_field('period', 'wk', $rental_id);
+
+
+				    			update_field('link_av', $link_availability, $rental_id);
+				    			update_field('print_page', 1, $rental_id);
+				    			update_field( 'sections', $intro_section_rentals, $rental_id );
+				    			update_field('imported', 1, $rental_id);
+
+			    			/* -- Homes -- */
+
+			    			$homes_flag = true;
+			    			$home_id = am_data_xml_equal_database($post_title, 'homes');
+			    			if( !$home_id ){
+
+			    				$homes_flag = false;
+
+				    			$new_home = array(
+			    				   'post_type' => 'homes',
+								   'post_title' => $post_title,
+								   'post_status' => 'publish'
+				    			);
+				    			$home_id = wp_insert_post( wp_slash($new_home) );
+				    		
+				    			array_push($array_id, $home_id);
+				    		}	
+
+				    			update_field('lot', $lot, $home_id);
+				    			update_field('community_or_rv_resort', $community_or_rv_resort, $home_id);
+
+				    			am_update_country_and_state($home_id, $state, $city);
+
+				    			update_field('price', $home_price, $home_id);
+				    			update_field('bedrooms', $bedrooms, $home_id);
+				    			update_field('bathrooms', $bathrooms, $home_id);
+				    			update_field('square_footage', $square_footage, $home_id);
+				    			update_field('about_text', $about_text, $home_id);
+				    			update_field('features_list', $features_list, $home_id);
+				    			am_insert_term($home_id, $home_dimensions, 'home-sale-dimension');
+				    			am_insert_term($home_id, $manufacturer, 'home-sale-manufacturers');
+				    			update_field('year_made', $year_made, $home_id);
+
+				    			update_field('link_avlb', $link_availability_homes, $home_id);
+				    			update_field('print_page', 1, $home_id);
+				    			update_field( 'sections', $intro_section_homes, $home_id );
+				    			update_field('imported', 1, $home_id);
+
+			    			// common images
+			    			if(!$homes_flag && !$rentals_flag) {
+
+			    				am_parse_and_saving_img($array_id, $xml, $upload_hub, $post_title);
+
+			    			}elseif(!$rentals_flag && $homes_flag){
+
+			    				am_parse_and_update_img($rental_id, $xml, $upload_hub, 'rentals', $post_title, array(), $All_XML_images_array);
+
+			    				am_parse_and_update_img($home_id, $xml, $upload_hub, 'homes', $post_title, array(), $All_XML_images_array);
+
+			    				// 1-update ID, 2-get ID
+			    				am_update_slider_ID($rental_id, $home_id);
+				    			
+				    		}elseif(!$homes_flag && $rentals_flag){
+
+				    			am_parse_and_update_img($home_id, $xml, $upload_hub, 'homes', $post_title, array(), $All_XML_images_array);
+			    				
+			    				am_parse_and_update_img($rental_id, $xml, $upload_hub, 'rentals', $post_title, array(), $All_XML_images_array);
+
+			    				// 1-update ID, 2-get ID
+			    				am_update_slider_ID($home_id, $rental_id);
+
+			    			}elseif($homes_flag && $rentals_flag){
+			    				$array_id = array();
+			    				array_push($array_id, $rental_id);
+			    				array_push($array_id, $home_id);
+			    				am_parse_and_update_img($rental_id, $xml, $upload_hub, 'both', $post_title, $array_id, $All_XML_images_array);
+			    			}
+
+		    			}else{
+
+		    				/* -- common data -- */
+		    				$post_id = am_data_xml_equal_database($post_title, $post_type);
+		    				if( !$post_id ){
+
+			    				$new_post = array(
+			    				   'post_type' => $post_type,
+								   'post_title' => $post_title,
+								   'post_status' => 'publish'
+				    			);
+				    			$post_id = wp_insert_post( wp_slash($new_post) );
+
+				    			am_parse_and_saving_img($post_id, $xml, $upload_hub, $post_title);
+				    		}else{
+				    			am_parse_and_update_img($post_id, $xml, $upload_hub, $post_type, $post_title, array(), $All_XML_images_array);
+				    		}
+
+				    			update_field('lot', $lot, $post_id);
+				    			update_field('community_or_rv_resort', $community_or_rv_resort, $post_id);
+				    			
+				    			am_update_country_and_state($post_id, $state, $city);
+
+				    			update_field('bedrooms', $bedrooms, $post_id);
+				    			update_field('bathrooms', $bathrooms, $post_id);
+				    			update_field('square_footage', $square_footage, $post_id);
+				    			update_field('about_text', $about_text, $post_id); 
+				    			update_field('features_list', $features_list, $post_id);
+				    			update_field('print_page', 1, $post_id);
+				    			update_field('imported', 1, $post_id);
+
+				    			if($post_type == 'rentals'){
+				    				update_field('price', $rental_price, $post_id);
+				    				am_insert_term($post_id, $home_dimensions, 'home-dimension');
+				    				update_field('manufacturer', $manufacturer, $post_id);
+				    				update_field('year_made', $year_made, $post_id);
+				    				update_field('rvmh', $rvmh, $post_id);
+				    				update_field('period', 'wk', $post_id);
+				    				update_field('link_av', $link_availability, $post_id);
+				    				update_field( 'sections', $intro_section_rentals, $post_id );
+				    			}elseif($post_type == 'homes'){
+				    				update_field('price', $home_price, $post_id);
+				    				am_insert_term($post_id, $home_dimensions, 'home-sale-dimension');
+				    				am_insert_term($post_id, $manufacturer, 'home-sale-manufacturers');
+				    				update_field('year_made', $year_made, $post_id);
+				    				update_field('link_avlb', $link_availability_homes, $post_id);
+				    				update_field( 'sections', $intro_section_homes, $post_id );
+				    			}
+		    			}
+					}
+				}
+
+			endwhile;
+			$xml_reader->close();
+
+			am_delete_unchecked_posts('rentals', $All_XML_images_array);
+			am_delete_unchecked_posts('homes', $All_XML_images_array);
+
+			Permalink_Manager_Actions::clear_all_uris();
+		}
+	
+	}
+
+	function am_check_images($post_id, $xml, $upload_hub=''){
+
+		$UD_images = array();
+		$UPDATE_images = array();
+		$DELETE_images = array();
+
+		$GALLERY_images = array();
+		$XML_images = array();
+		
+		if($post_id){
+
+			// get GALLERY images
+			$GALLERY_images = am_get_image_basename(get_field('slider', $post_id), 'acf');
+			
+
+			// get XML images
+			if( isset($xml->Images) && !empty($xml->Images) ){
+				if( isset($xml->Images->Url) && !empty($xml->Images->Url) ){
+					$XML_images = am_get_image_basename( (array) $xml->Images->Url, 'xml');
+				}
+			}
+			
+			$count_GALLERY_images = count($GALLERY_images);
+			$count_XML_images = count($XML_images);
+
+			// COUNT == TRUE
+			if($count_GALLERY_images == $count_XML_images){
+
+				if($GALLERY_images == $XML_images){
+					
+					$UPDATE_images = array();
+				}else{
+					$sort_GALLERY_images = $GALLERY_images;
+					$sort_XML_images = $XML_images;
+					sort($sort_GALLERY_images);
+					sort($sort_XML_images);
+
+					if($sort_GALLERY_images == $sort_XML_images){
+						
+						foreach ($XML_images as $key => $x_img) {
+							
+							$UPDATE_images[$key.'_update'] = $x_img;
+						}
+					}else{
+						foreach ($XML_images as $key => $x_img) {
+							if(in_array($x_img, $GALLERY_images)){
+								$UPDATE_images[$key.'_update'] = $x_img;
+							}else{
+								$UPDATE_images[$key.'_insert'] = $XML_images[$key];
+							}
+						}
+
+						//which should Delete
+						foreach ($GALLERY_images as $key => $g_img) {
+							if(!in_array($g_img, $XML_images)){
+								$DELETE_images[$key.'_delete'] = $g_img;
+							}
+						}
+					}
+				}
+			}else{
+				// which should Update & Insert
+				foreach ($XML_images as $key => $x_img) {
+					if(in_array($x_img, $GALLERY_images)){
+						$UPDATE_images[$key.'_update'] = $x_img;
+					}else{
+						$UPDATE_images[$key.'_insert'] = $XML_images[$key];
+					}
+				}
+
+				//which should Delete
+				foreach ($GALLERY_images as $key => $g_img) {
+					if(!in_array($g_img, $XML_images)){
+						$DELETE_images[$key.'_delete'] = $g_img;
+					}
+				}
+			}
+
+			$UD_images['update'] = $UPDATE_images;
+			$UD_images['delete'] = $DELETE_images;
+			
+			//print_r($UD_images);exit;
+		}
+
+		return $UD_images;
+	}
+
+	function am_get_image_basename($images_array, $type = 'xml'){
+
+		$images_name_array = array();
+		if($images_array){
+			foreach( $images_array as $key => $image ){
+				if($type == 'xml'){
+					array_push($images_name_array, basename($image));
+				}elseif($type == 'acf'){
+					$info = pathinfo($image['url']);
+					$file_name =  basename($image['url'],'.'.$info['extension']);
+					array_push($images_name_array, $file_name);
+				}
+			}
+		}
+		return $images_name_array;
+	}
+
+	function am_parse_and_update_img($post_id, $xml, $upload_hub, $post_type='', $post_title, $array_id=array(), $All_XML_images_array = array()){
+
+		// Images
+		if($post_id){
+
+			// get a images from slider
+			 $GALLERY_slider = array();
+			 $GALLERY_slider_arr = array();
+
+			if($array_id && is_array($array_id) && $post_type == 'both'){
+				foreach ($array_id as $id) {
+					$GALLERY_slider_arr[$id] = get_field('slider', $id);
+				}
+
+			}else{
+				$GALLERY_slider = get_field('slider', $post_id);
+			}
+
+
+
+			// for insert
+			$slider_image_ids = array();
+
+			$post_type_insert = get_post_type( $post_id );
+			if($post_type_insert == 'rentals'){
+				$home_id = am_data_xml_equal_database($post_title, 'homes');
+				if($home_id){
+					$slider_image_ids = am_get_sliderID_and_attachname(get_field('slider', $home_id, false));
+				}
+				
+			}elseif($post_type_insert == 'homes'){
+				$rental_id = am_data_xml_equal_database($post_title, 'rentals');
+				
+				if($rental_id){
+					$slider_image_ids = am_get_sliderID_and_attachname(get_field('slider', $rental_id, false));
+				}
+				
+			}
+					
+
+			// check images
+			$UD_images = am_check_images($post_id, $xml, $upload_hub); 
+
+
+
+			if($UD_images){
+
+				if( isset($xml->Images) && !empty($xml->Images) ){
+					if( isset($xml->Images->Url) && !empty($xml->Images->Url) ){
+						
+						$array_attach_id = array();
+
+						foreach ($xml->Images->Url as $key => $img_url) {
+							$img_url = (string)$img_url;
+
+							$basename_img_url = basename($img_url);
+							if( isset($UD_images['update']) && !empty($UD_images['update']) && in_array($basename_img_url, $UD_images['update']) ){
+
+								$UD_images_key = explode("_", array_search($basename_img_url, $UD_images['update']));
+
+								if($UD_images_key[1] == 'insert'){
+
+									// insert
+									$attach_id = array_search($basename_img_url, $slider_image_ids);
+
+									if($attach_id){
+
+										array_push($array_attach_id, $attach_id);
+
+									}else{
+										if($image_type = am_get_type_image($img_url)){
+											$image_with_type = $img_url.$image_type;
+											$image_name = basename($image_with_type);
+											$image_data = file_get_contents($img_url);
+											
+											$image_path = $upload_hub->path.'/hub/img/'.$image_name;
+											file_put_contents($image_path, $image_data);
+
+
+											// insert the image into the media library
+											$wp_filetype = wp_check_filetype($image_name, null );
+
+											$attachment = array(
+												'guid' => $image_path,
+											    'post_mime_type' => $wp_filetype['type'],
+											    'post_title' => preg_replace( '/\.[^.]+$/', '', $image_name ),
+											    'post_content' => '',
+											    'post_status' => 'inherit'
+											);
+											
+											$attach_id = wp_insert_attachment( $attachment, $image_path );
+
+											$imagenew = get_post( $attach_id );
+											$fullsizepath = get_attached_file( $imagenew->ID );
+
+											if ( !is_wp_error($attach_id) ) {
+
+												$attach_data = wp_generate_attachment_metadata( $attach_id, $fullsizepath );
+												wp_update_attachment_metadata( $attach_id, $attach_data );
+												array_push($array_attach_id, $attach_id);
+											}
+										}
+									}
+								}elseif($UD_images_key[1] == 'update'){
+									
+									if($array_id && is_array($array_id) && $post_type == 'both'){
+										if($GALLERY_slider_arr){
+											foreach( $GALLERY_slider_arr as $id => $arr_image ){
+												if($arr_image){
+													foreach( $arr_image as $image ){
+														$info = pathinfo($image['url']);
+														$file_name =  basename($image['url'],'.'.$info['extension']);
+
+														if($basename_img_url == $file_name){
+															array_push($array_attach_id, $image['ID']);
+														}
+													}
+												}
+											}
+										}
+
+									}else{
+										if($GALLERY_slider){
+											foreach( $GALLERY_slider as $image ){
+												
+												$info = pathinfo($image['url']);
+												$file_name =  basename($image['url'],'.'.$info['extension']);
+
+												if($basename_img_url == $file_name){
+													array_push($array_attach_id, $image['ID']);
+												}
+											}
+										}
+									}	
+								}
+							}
+						}
+
+						// set image to ACF gallery
+						if($array_attach_id){
+							if($array_id && is_array($array_id) && $post_type == 'both'){
+								foreach ($array_id as $id) {
+									update_field('show_sidebar', 1, $id);
+									update_field('slider', $array_attach_id, $id);
+								}
+
+							}else{
+								update_field('show_sidebar', 1, $post_id);
+								update_field('slider', $array_attach_id, $post_id);
+							}
+						}
+					}
+				}
+
+				if( isset($UD_images['delete']) && !empty($UD_images['delete']) ){
+					
+					if($array_id && is_array($array_id) && $post_type == 'both'){
+
+						if($GALLERY_slider_arr){
+							foreach( $GALLERY_slider_arr as $id => $arr_image ){
+								if($arr_image){
+									foreach( $arr_image as $image ){
+										$info = pathinfo($image['url']);
+										$file_name =  basename($image['url'],'.'.$info['extension']);
+
+										if(in_array($file_name, $UD_images['delete'])){
+											//wp_delete_attachment($image['ID'], true);
+
+											if( !in_array($image['title'], $All_XML_images_array) ){
+												wp_delete_attachment($image['ID'], true);
+											}else{
+												am_remove_attachments_by_id($image['ID']);
+											}
+										}
+									}
+								}
+							}
+						}
+					}else{
+						
+						if($GALLERY_slider){
+							foreach( $GALLERY_slider as $image ){
+								
+								$info = pathinfo($image['url']);
+								$file_name =  basename($image['url'],'.'.$info['extension']);
+
+								if(in_array($file_name, $UD_images['delete'])){
+
+									if($post_type == 'rentals'){
+										
+										$home_id = am_data_xml_equal_database($post_title, 'homes');
+										if($home_id){
+											
+											$home_slider = get_field('slider', $home_id, false);
+											if($home_slider){
+												if($home_slider && !in_array($image['ID'], $home_slider)){
+													wp_delete_attachment($image['ID'], true);
+												}
+											}else{
+												wp_delete_attachment($image['ID'], true);
+											}
+										}else{
+											
+											if( !in_array($image['title'], $All_XML_images_array) ){
+												wp_delete_attachment($image['ID'], true);
+											}else{
+												am_remove_attachments_by_id($image['ID']);
+											}
+										}	
+									}elseif($post_type == 'homes'){
+										$rental_id = am_data_xml_equal_database($post_title, 'rentals');
+										if($rental_id){
+											$rental_slider = get_field('slider', $rental_id, false);
+											
+											if($rental_slider){
+												if($rental_slider && !in_array($image['ID'], $rental_slider)){
+													wp_delete_attachment($image['ID'], true);
+												}
+											}else{
+												wp_delete_attachment($image['ID'], true);
+											}
+										}else{
+
+											if( !in_array($image['title'], $All_XML_images_array) ){
+												wp_delete_attachment($image['ID'], true);
+											}else{
+												am_remove_attachments_by_id($image['ID']);
+											}
+										}
+									}
+									
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	function am_parse_and_saving_img($post_id, $xml, $upload_hub, $post_title){
+
+		// Images
+		if($post_id){
+
+			$slider_image_ids = array();
+
+			$post_type = get_post_type( $post_id );
+			if($post_type == 'rentals'){
+				$home_id = am_data_xml_equal_database($post_title, 'homes');
+				if($home_id){
+					$slider_image_ids = am_get_sliderID_and_attachname(get_field('slider', $home_id, false));
+				}
+				
+			}elseif($post_type == 'homes'){
+				$rental_id = am_data_xml_equal_database($post_title, 'rentals');
+				
+				if($rental_id){
+					$slider_image_ids = am_get_sliderID_and_attachname(get_field('slider', $rental_id, false));
+				}
+				
+			}
+
+
+
+			if( isset($xml->Images) && !empty($xml->Images) ){
+				if( isset($xml->Images->Url) && !empty($xml->Images->Url) ){
+					
+					$array_attach_id = array();
+
+					foreach ($xml->Images->Url as $key => $img_url) {
+						$img_url = (string)$img_url;
+
+						$basename_img_url = basename($img_url);
+						$attach_id = array_search($basename_img_url, $slider_image_ids);
+
+						if($attach_id){
+
+							array_push($array_attach_id, $attach_id);
+
+						}else{
+				
+							if($image_type = am_get_type_image($img_url)){
+								$image_with_type = $img_url.$image_type;
+								$image_name = basename($image_with_type);
+								$image_data = file_get_contents($img_url);
+								
+								$image_path = $upload_hub->path.'/hub/img/'.$image_name;
+								file_put_contents($image_path, $image_data);
+
+
+								// insert the image into the media library
+								$wp_filetype = wp_check_filetype($image_name, null );
+
+								$attachment = array(
+									'guid' => $image_path,
+								    'post_mime_type' => $wp_filetype['type'],
+								    'post_title' => preg_replace( '/\.[^.]+$/', '', $image_name ),
+								    'post_content' => '',
+								    'post_status' => 'inherit'
+								);
+								
+								$attach_id = wp_insert_attachment( $attachment, $image_path );
+
+								$imagenew = get_post( $attach_id );
+								$fullsizepath = get_attached_file( $imagenew->ID );
+
+								if ( !is_wp_error($attach_id) ) {
+
+									$attach_data = wp_generate_attachment_metadata( $attach_id, $fullsizepath );
+									wp_update_attachment_metadata( $attach_id, $attach_data );
+									array_push($array_attach_id, $attach_id);
+								}
+							}
+						}
+					}
+
+					// set image to ACF gallery
+					if($array_attach_id){
+						if(is_array($post_id)){
+							foreach ($post_id as $id) {
+								update_field('show_sidebar', 1, $id);
+								update_field('slider', $array_attach_id, $id);
+							}
+
+						}else{
+							update_field('show_sidebar', 1, $post_id);
+							update_field('slider', $array_attach_id, $post_id);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	function am_get_type_image($img_url){
+
+		$type = '';
+
+		if(am_remote_file_exists($img_url)){
+			$imagetype = exif_imagetype($img_url);
+
+			if($imagetype == IMAGETYPE_JPEG) $type = '.jpg';
+			elseif($imagetype == IMAGETYPE_PNG) $type = '.png';
+			elseif($imagetype == IMAGETYPE_PNG) $type = '.gif';
+			else $type = '.jpg';
+		}
+		return $type;
+	}
+
+	function am_remote_file_exists($url){
+	    $ch = curl_init($url);
+	    curl_setopt($ch, CURLOPT_NOBODY, true);
+	    curl_exec($ch);
+	    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+	    curl_close($ch);
+	    if( $httpCode == 200 ){return true;}
+	}
+
+	function am_insert_term($post_id, $term, $taxonomy){
+
+		if($post_id && $term && $taxonomy){
+
+			$term_exists = term_exists( $term, $taxonomy );
+
+			if(!$term_exists){
+				$data = wp_insert_term($term, $taxonomy);
+				if( !is_wp_error($data) ) {
+					$terms = wp_set_object_terms( $post_id, $data['term_id'], $taxonomy );
+					if( !is_wp_error($terms) ) return $terms;
+					else return false;
+				}else {
+					return false;
+				}
+			}else{
+				$terms = wp_set_object_terms( $post_id, (int)$term_exists['term_id'], $taxonomy );
+				if( !is_wp_error($terms) ) return $terms;
+				else return false;
+			}
+		}else{
+			return false;
+		}
+	}
+
+
+	function am_update_country_and_state($post_id, $state, $city){
+
+		//initial update USA
+		update_field('country', 'USA', $post_id);
+		update_field('usa_states', 'Alabama', $post_id);
+		
+
+		$usa_states = get_field_object('usa_states', $post_id);
+		
+
+		if( isset($usa_states['choices']) && is_array($usa_states['choices']) && array_key_exists($state, $usa_states['choices']) ){
+
+				update_field('country', 'USA', $post_id);
+				update_field('usa_states', $state, $post_id);
+				update_field('usa_city', $city, $post_id);
+			
+		}else{
+
+			//initial update Canada
+			update_field('country', 'Canada', $post_id);
+			update_field('canada_provinces', 'Alberta', $post_id);
+
+			$canada_provinces = get_field_object('canada_provinces', $post_id);
+			if( isset($canada_provinces['choices']) && is_array($canada_provinces['choices']) && array_key_exists($state, $canada_provinces['choices']) ){
+
+				update_field('country', 'Canada', $post_id);
+				update_field('canada_provinces', $state, $post_id);
+				update_field('canada_city', $city, $post_id);
+			}
+		}
+	}
+
+	function am_delete_posts_and_terms() {
+
+		$alltermsID = array();
+		$home_dimension = array();
+		$home_sale_dimension = array();
+		$home_sale_manufacturers = array();
+
+		$allgalleryID = array();
+		$gallery = array();
+
+		// Rentals
+	    $args_rentals = array(
+	        'post_type' => 'rentals', 
+	        'numberposts'=>-1
+	    );
+	    $allrentals = get_posts( $args_rentals );
+	    foreach ($allrentals as $eachrental) {
+
+	    	//slider
+	    	$each_slider = get_field('slider', $eachrental->ID, false);
+	    	array_push($gallery, $each_slider);
+
+	    	//home-dimension
+	    	$each_terms = wp_get_object_terms( $eachrental->ID, 'home-dimension', array( 'fields' => 'ids' ) );
+	    	array_push($home_dimension, $each_terms);
+
+			wp_delete_post( $eachrental->ID, true );
+		}
+
+		// Homes
+	    $args_homes = array(
+	        'post_type' => 'homes', 
+	        'numberposts'=>-1
+	    );
+	    $allhomes = get_posts( $args_homes );
+		foreach ($allhomes as $eachhome) {
+
+			//slider
+			$each_slider = get_field('slider', $eachhome->ID, false);
+			array_push($gallery, $each_slider);
+
+			//home-sale-dimension
+			$each_terms = wp_get_object_terms( $eachhome->ID, 'home-sale-dimension', array( 'fields' => 'ids' ) );
+	    	array_push($home_sale_dimension, $each_terms);
+
+	    	//home-sale-manufacturers
+	    	$each_terms = wp_get_object_terms( $eachhome->ID, 'home-sale-manufacturers', array( 'fields' => 'ids' ) );
+	    	array_push($home_sale_manufacturers, $each_terms);
+
+			wp_delete_post( $eachhome->ID, true );
+		}
+
+		//slider
+		$image_ids = am_get_common_array($gallery, $allgalleryID);
+		if($image_ids){
+			foreach ($image_ids as $image_id) {
+				wp_delete_attachment($image_id, true);
+			}
+		}
+
+		//home-dimension terms
+		$terms_ids = am_get_common_array($home_dimension, $alltermsID);
+		if($terms_ids){
+			foreach ($terms_ids as $terms_id) {
+				wp_delete_term($terms_id, 'home-dimension');
+			}
+		}
+
+		//home-sale-dimension terms
+		$terms_ids = am_get_common_array($home_sale_dimension, $alltermsID);
+		if($terms_ids){
+			foreach ($terms_ids as $terms_id) {
+				wp_delete_term($terms_id, 'home-sale-dimension');
+			}
+		}
+
+		//home-sale-manufacturers terms
+		$terms_ids = am_get_common_array($home_sale_manufacturers, $alltermsID);
+		if($terms_ids){
+			foreach ($terms_ids as $terms_id) {
+				wp_delete_term($terms_id, 'home-sale-manufacturers');
+			}
+		}
+
+	}
+
+
+	function am_get_common_array($array, $resul){
+		if($array){
+			foreach ($array as $arr) {
+				if($arr){
+					foreach ($arr as $a) {
+						array_push($resul, $a);
+					}
+				}
+			}
+		}
+
+		return array_unique($resul);
+	}
+
+	// 1 Check that the data from the XML is equal to the data from the database.
+	function am_data_xml_equal_database($post_title, $post_type){
+
+		if($post_type && $post_title){
+			$posts = am_get_all_rentals_or_homes($post_type);
+			if($post_ID = am_helper_array_contains_word($posts, $post_title)){
+				return $post_ID;
+			}
+		}
+		return false;
+
+	}
+
+	// 2 Get all CPT
+	function am_get_all_rentals_or_homes($post_type){
+
+		$args = array(
+			'post_type' => $post_type,
+			'post_status' => 'publish',
+			'posts_per_page' => -1
+		);
+		$result = get_posts( $args );
+
+		if($result) return $result;
+		else return false;
+	}
+
+	// 3 contains word helper
+	function am_helper_array_contains_word($post_array, $post_title) {
+		if($post_array && is_array($post_array) && !empty($post_title)){
+		    foreach ($post_array as $elm) {
+		        if ($elm->post_title == $post_title) {
+		            return $elm->ID;
+		        }
+		    }
+		}
+	    return false;
+	}
+
+	function am_remove_attachments_by_id($image_id) {
+	  global $wpdb;
+	  $ids = $image_id;
+	  if ( empty($ids) ) return;
+	  
+	  // remove post meta
+	  $wpdb->query("DELETE FROM $wpdb->postmeta WHERE post_id = $ids");
+	  // remove posts
+	  $wpdb->query("DELETE FROM $wpdb->posts WHERE ID = $ids");
+	}
+
+	// 5 delete all with unchecked box
+	function am_delete_unchecked_posts($post_type, $All_XML_images_array) {
+		
+	    $args = array(
+			'post_type' => $post_type,
+			'post_status' => 'publish',
+			'posts_per_page' => -1
+		);
+		if($result = get_posts( $args )){
+			foreach ($result as $eachpost) {
+
+				if( !get_field('imported', $eachpost->ID) ) {
+
+					
+
+					if($post_type == 'rentals'){
+
+						$homes_obj = get_page_by_title( $eachpost->post_title, OBJECT, 'homes' );
+
+						if(!$homes_obj){
+
+							$rentals_image_ids = am_get_sliderID_and_attachname(get_field('slider', $eachpost->ID, false));
+
+							if($rentals_image_ids){
+								foreach ( $rentals_image_ids as $image_id => $image_name ) {
+									if( !in_array($image_name, $All_XML_images_array) ){
+										wp_delete_attachment($image_id, true);
+									}else{
+										if(!array_key_exists($image_id, $homes_image_ids)){
+											am_remove_attachments_by_id($image_id);
+										}
+									}
+								}
+							}
+						}else{
+							// homes slider
+							$homes_image_ids = am_get_sliderID_and_attachname(get_field('slider', $homes_obj->ID, false));
+
+							// rentals slider
+							$rentals_image_ids = am_get_sliderID_and_attachname(get_field('slider', $eachpost->ID, false));
+
+							if($rentals_image_ids){
+								foreach ( $rentals_image_ids as $image_id => $image_name ) {
+									if( !in_array($image_name, $homes_image_ids) && !in_array($image_name, $All_XML_images_array) ){
+										wp_delete_attachment($image_id, true);
+									}else{
+										am_remove_attachments_by_id($image_id);
+									}
+								}
+							}
+						}
+						wp_delete_post( $eachpost->ID, true );
+
+					}elseif($post_type == 'homes'){
+
+						$rentals_obj = get_page_by_title( $eachpost->post_title, OBJECT, 'rentals' );
+
+						if(!$rentals_obj){
+
+							$homes_image_ids = am_get_sliderID_and_attachname(get_field('slider', $eachpost->ID, false));
+
+							if($homes_image_ids){
+								foreach ($homes_image_ids as $image_id => $image_name) {
+									if(!in_array($image_name, $All_XML_images_array)){
+										wp_delete_attachment($image_id, true);
+									}else{
+										am_remove_attachments_by_id($image_id);
+									}
+								}
+							}
+						}else{
+
+							// rentals slider
+							$rentals_image_ids = am_get_sliderID_and_attachname(get_field('slider', $rentals_obj->ID, false));
+
+							// homes slider
+							$homes_image_ids = am_get_sliderID_and_attachname(get_field('slider', $eachpost->ID, false));
+
+							if($homes_image_ids){
+								foreach ($homes_image_ids as $image_id => $image_name) {
+									if(!in_array($image_name, $rentals_image_ids) && !in_array($image_name, $All_XML_images_array)){
+										wp_delete_attachment($image_id, true);
+									}else{
+										if(!array_key_exists($image_id, $rentals_image_ids)){
+											am_remove_attachments_by_id($image_id);
+										}
+									}
+								}
+							}
+						}
+						wp_delete_post( $eachpost->ID, true );
+					}
+
+				}else {
+					update_field('imported', 0, $eachpost->ID);
+				}
+			}
+		}
+	}
+
+	// helper get and update slider's ID
+	function am_update_slider_ID($update_id, $get_id){
+
+		$array_slider_id = array();
+
+		if($slider = get_field('slider', $get_id)){
+			
+			foreach( $slider as $sl ){
+				array_push($array_slider_id, $sl);
+			}
+
+			update_field('show_sidebar', 1, $update_id);
+			update_field('slider', $array_slider_id, $update_id);
+		}
+	}
+
+	function am_get_sliderID_and_attachname($slider_image_ids){
+		$rusult_names = array();
+		if($slider_image_ids){
+			foreach ($slider_image_ids as $attach_id) {
+				$path = get_attached_file( $attach_id );
+				$info = pathinfo($path);
+				if($info && $path && isset($info['extension'])){
+					$file_name =  basename($path,'.'.$info['extension']);
+					$rusult_names[$attach_id] = $file_name;
+				}
+			}
+		}
+		return $rusult_names;
+	}
+
+?>
