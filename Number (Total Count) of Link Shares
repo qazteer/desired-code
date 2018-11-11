@@ -1,0 +1,30 @@
+//Add symbol
+function thousandsCurrencyFormat($num) {
+  $x = round($num);
+  $x_number_format = number_format($x);
+  $x_array = explode(',', $x_number_format);
+  $x_parts = array('k', 'm', 'b', 't');
+  $x_count_parts = count($x_array) - 1;
+  $x_display = $x;
+  $x_display = $x_array[0] . ((int) $x_array[1][0] !== 0 ? '.' . $x_array[1][0] : '');
+  $x_display .= $x_parts[$x_count_parts - 1];
+  return $x_display;
+}
+
+//Get count share
+function getCountShare($page_url){
+	$count_social_share = get_transient('count_social_share');
+	if (false === $count_social_share) {
+		$tw = json_decode(file_get_contents('http://opensharecount.com/count.json?url='.$page_url));
+		$pin = json_decode(preg_replace('/^receiveCount\((.*)\)$/', "\\1",file_get_contents('http://api.pinterest.com/v1/urls/count.json?callback=receiveCount&url='.get_permalink())));
+		$in = json_decode(file_get_contents('http://www.linkedin.com/countserv/count/share?url='.$page_url . "&format=json"));
+		$fb = json_decode(file_get_contents("https://graph.facebook.com/".$page_url));
+		$count_social_share = $tw->count + $pin->count + $in->count + $fb->share->share_count;
+		set_transient( 'count_social_share', $count_social_share, 24 * HOUR_IN_SECONDS); //24*60*60
+	}
+	return thousandsCurrencyFormat($count_social_share);
+}
+
+$am_url = get_permalink();
+
+echo getCountShare($am_url);
