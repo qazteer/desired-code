@@ -1,0 +1,18 @@
+$table = 'games';
+
+$cases = [];
+$ids = [];
+$params = [];
+
+foreach ($data['paths'] as $name => $path) {
+    $id = $name;
+    $cases[] = "WHEN '{$id}' then ?";
+    $params[] = $path;
+    $ids[] = "'".$id."'";
+}
+
+$ids = implode(',', $ids);
+$cases = implode(' ', $cases);
+
+
+DB::update("UPDATE `{$table}` SET `image` = CASE `code` {$cases} END WHERE `code` in ({$ids})", $params);
